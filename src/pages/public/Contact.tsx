@@ -196,8 +196,7 @@ export default function Contact() {
                     <h4 className="font-bold text-lg">Our Center</h4>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-zinc-300 text-sm font-medium">123 Education Hub, Mukherjee Nagar</p>
-                    <p className="text-zinc-500 text-xs">{socials.address || 'New Delhi, Delhi 110009'}</p>
+                    <p className="text-zinc-300 text-sm font-medium">{socials.address || 'Shastri Nagar, Near Honda Showroom, Munger 811201'}</p>
                   </div>
                 </div>
                 <Button className="w-full bg-white text-zinc-900 hover:bg-zinc-100 text-xs font-bold rounded-xl h-11">

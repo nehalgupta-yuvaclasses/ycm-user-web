@@ -18,7 +18,7 @@ export function Footer() {
                 <GraduationCap className="w-5 h-5" />
               </div>
               <span className="text-lg font-bold tracking-tight text-zinc-900">
-                Global Yuva Classes
+                Yuva Classes
               </span>
             </Link>
             <p className="text-zinc-500 text-sm leading-relaxed">
@@ -42,7 +42,7 @@ export function Footer() {
           </div>
 
           {/* Links Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 lg:gap-16">
+          <div className="grid grid-cols-2 sm:grid-cols-2 gap-8 lg:gap-16">
             <div>
               <h4 className="font-bold text-zinc-900 mb-5 text-[10px] uppercase tracking-[0.2em]">Platform</h4>
               <ul className="space-y-3">
@@ -65,18 +65,6 @@ export function Footer() {
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-zinc-900 mb-5 text-[10px] uppercase tracking-[0.2em]">Exams</h4>
-              <ul className="space-y-3">
-                {['SSC GD', 'Bihar Police', 'Railway', 'Banking'].map((item) => (
-                  <li key={item}>
-                    <a href="#" className="text-zinc-500 hover:text-zinc-900 text-sm transition-colors">
-                      {item}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="col-span-2 sm:col-span-1">
               <h4 className="font-bold text-zinc-900 mb-5 text-[10px] uppercase tracking-[0.2em]">Support</h4>
               <ul className="space-y-3">
                 <li>
@@ -107,7 +95,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-zinc-100 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-zinc-400 text-xs font-medium">
-            2026 Global Yuva Classes, All Right Reserved
+            2026 YCM Edutech Pvt Ltd, All Right Reserved
           </p>
           <div className="flex gap-6">
             <Link to="/privacy" className="text-zinc-400 hover:text-zinc-900 text-xs font-medium transition-colors">Privacy</Link>
