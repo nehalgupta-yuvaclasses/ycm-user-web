@@ -22,7 +22,7 @@ export function FacultySection() {
                 <Card className="overflow-hidden border-4 border-zinc-50 rounded-2xl shadow-xl">
                   <div className="aspect-[4/5] relative">
                     <img
-                      src="https://picsum.photos/seed/nehalgupta/800/1000"
+                      src="/images/nehalsir_pic.png"
                       alt="Nehal Gupta"
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"

@@ -7,6 +7,7 @@ import {
 import { motion } from 'motion/react';
 import { HelpCircle, Loader2 } from 'lucide-react';
 import { useFAQs } from '@/features/platform/hooks';
+import { Link } from 'react-router-dom';
 
 export function FAQSection() {
   const { data: faqs, isLoading } = useFAQs();
@@ -79,7 +80,7 @@ export function FAQSection() {
             className="mt-16 text-center"
           >
             <p className="text-zinc-400 text-sm">
-              Still have questions? <a href="#contact" className="text-zinc-900 font-bold underline underline-offset-4 hover:text-zinc-600 transition-colors">Contact our support team</a>
+              Still have questions? <Link to="/contact" className="text-zinc-900 font-bold underline underline-offset-4 hover:text-zinc-600 transition-colors">Contact our support team</Link>
             </p>
           </motion.div>
         </div>
