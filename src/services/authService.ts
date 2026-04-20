@@ -110,6 +110,14 @@ function getFirebaseAuthErrorCode(error: unknown) {
 function getFirebaseAuthErrorMessage(error: unknown) {
   const code = getFirebaseAuthErrorCode(error);
 
+  if (code === 'auth/invalid-api-key') {
+    return 'Firebase API key is invalid or not enabled for this project. Verify the deployed VITE_FIREBASE_* values and API key restrictions.';
+  }
+
+  if (code === 'auth/unauthorized-domain') {
+    return 'This domain is not authorized for Firebase Phone Auth. Add the current host to Firebase Authentication authorized domains.';
+  }
+
   if (code === 'auth/invalid-phone-number') {
     return 'Enter a valid Indian phone number in +91 format.';
   }
@@ -153,15 +161,6 @@ export function canonicalIndianPhoneNumber(phoneNumber?: string | null) {
   }
 
   return digits ? `+${digits}` : '';
-}
-
-function isLocalDevelopmentHost() {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  const hostname = window.location.hostname;
-  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
 }
 
 function clearPhoneRecaptchaVerifier() {
@@ -218,10 +217,6 @@ export async function sendPhoneOtp(phoneNumber: string): Promise<PhoneOtpSendRes
 
   if (!formattedPhoneNumber) {
     throw new Error('Enter a valid 10-digit Indian phone number.');
-  }
-
-  if (isLocalDevelopmentHost()) {
-    throw new Error('Firebase Phone Auth does not support localhost. Use a Firebase Hosting or production domain, or test phone auth in a supported environment.');
   }
 
   await authPersistenceReady.catch(() => undefined);
