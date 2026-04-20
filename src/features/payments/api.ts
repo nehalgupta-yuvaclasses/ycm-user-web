@@ -65,7 +65,7 @@ function normalizeStatus(status: string | null): PaymentStatus {
 }
 
 async function resolveUserId() {
-  return auth.currentUser?.uid ?? null;
+  return auth?.currentUser?.uid ?? null;
 }
 
 async function invokePaymentFunction<T>(action: string, payload: Record<string, unknown> = {}, headers?: HeadersInit) {

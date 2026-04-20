@@ -35,7 +35,7 @@ function readSettings(rawSettings?: Partial<UserSettings> | null): UserSettings 
 }
 
 async function resolveSettingsProfile(): Promise<SettingsProfile> {
-  const firebaseUser = auth.currentUser;
+  const firebaseUser = auth?.currentUser;
 
   if (!firebaseUser) {
     throw new Error('You must be signed in to manage settings.');
@@ -62,7 +62,7 @@ export async function fetchSettingsProfile(): Promise<SettingsProfile> {
 }
 
 export async function updateNotificationPreferences(notifications: UserSettings['notifications']) {
-  const firebaseUser = auth.currentUser;
+  const firebaseUser = auth?.currentUser;
 
   if (!firebaseUser) {
     throw new Error('You must be signed in to update settings.');
@@ -93,7 +93,7 @@ export async function updateNotificationPreferences(notifications: UserSettings[
 }
 
 export async function updateLanguage(language: string) {
-  const firebaseUser = auth.currentUser;
+  const firebaseUser = auth?.currentUser;
 
   if (!firebaseUser) {
     throw new Error('You must be signed in to update settings.');
@@ -124,7 +124,7 @@ export async function updateLanguage(language: string) {
 }
 
 export async function updatePassword(nextPassword: string) {
-  const firebaseUser = auth.currentUser;
+  const firebaseUser = auth?.currentUser;
 
   if (!firebaseUser) {
     throw new Error('You must be signed in to update your password.');

@@ -19,6 +19,14 @@ import {
 } from 'lucide-react';
 import { useAuthModal } from '@/contexts/AuthContext';
 
+function isLiveLesson(lesson: any) {
+  return Boolean(lesson?.is_live || (lesson?.lesson_type === 'live' && !lesson?.live_ended_at));
+}
+
+function isEndedLiveLesson(lesson: any) {
+  return Boolean(lesson?.lesson_type === 'live' && !isLiveLesson(lesson) && lesson?.live_ended_at);
+}
+
 export default function CourseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -318,18 +326,43 @@ export default function CourseDetail() {
                                               <div
                                                 key={lesson.id}
                                                 id={`lesson-${lesson.id}`}
-                                                className="flex items-center justify-between p-4 rounded-xl hover:bg-white transition-colors group scroll-mt-24"
+                                                className="flex items-center justify-between gap-4 p-4 rounded-xl hover:bg-white transition-colors group scroll-mt-24"
                                               >
-                                                <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-4 min-w-0">
                                                   <div className="w-8 h-8 rounded-lg bg-white border border-zinc-100 flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 transition-colors">
                                                     {lesson.lesson_type === 'recorded' ? <Play className="w-3 h-3 fill-current" /> : <Video className="w-3 h-3" />}
                                                   </div>
-                                                  <div>
-                                                    <p className="text-sm font-medium text-zinc-900">{lesson.title}</p>
-                                                    <p className="text-xs text-zinc-400 font-medium">{lesson.duration || 'Live Session'}</p>
+                                                  <div className="min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                      <p className="text-sm font-medium text-zinc-900 truncate">{lesson.title}</p>
+                                                      {isLiveLesson(lesson) && (
+                                                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-wider">
+                                                          Live now
+                                                        </span>
+                                                      )}
+                                                      {isEndedLiveLesson(lesson) && (
+                                                        <span className="px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-500 text-[10px] font-black uppercase tracking-wider">
+                                                          Ended
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                    <p className="text-xs text-zinc-400 font-medium">
+                                                      {lesson.duration || (lesson.lesson_type === 'live' ? 'Live Session' : 'Recorded lesson')}
+                                                    </p>
                                                   </div>
                                                 </div>
-                                                <Lock className="w-3 h-3 text-zinc-300" />
+                                                <div className="flex items-center gap-2">
+                                                  {isLiveLesson(lesson) && lesson.live_url ? (
+                                                    <button
+                                                      onClick={() => window.open(lesson.live_url, '_blank', 'noopener,noreferrer')}
+                                                      className="px-3 py-1.5 rounded-full bg-zinc-900 text-white text-xs font-bold hover:bg-zinc-800 transition-colors"
+                                                    >
+                                                      Join class
+                                                    </button>
+                                                  ) : (
+                                                    <Lock className="w-3 h-3 text-zinc-300" />
+                                                  )}
+                                                </div>
                                               </div>
                                             ))
                                           ) : (

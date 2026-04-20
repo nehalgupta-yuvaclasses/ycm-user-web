@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
-import { auth, authPersistenceReady } from '@/lib/firebase';
+import { authPersistenceReady, getFirebaseAuth } from '@/lib/firebase';
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
@@ -190,6 +190,8 @@ function getRecaptchaContainer() {
 }
 
 async function getPhoneRecaptchaVerifier() {
+  const auth = getFirebaseAuth();
+
   if (recaptchaVerifier) {
     return recaptchaVerifier;
   }
@@ -212,6 +214,7 @@ export async function resetPhoneRecaptchaVerifier() {
 
 export async function sendPhoneOtp(phoneNumber: string): Promise<PhoneOtpSendResult> {
   const formattedPhoneNumber = formatIndianPhoneNumber(phoneNumber);
+  const auth = getFirebaseAuth();
 
   if (!formattedPhoneNumber) {
     throw new Error('Enter a valid 10-digit Indian phone number.');

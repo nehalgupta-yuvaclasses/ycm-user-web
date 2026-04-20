@@ -8,7 +8,7 @@ import {
   type ConfirmationResult,
   type User as FirebaseUser,
 } from 'firebase/auth';
-import { auth, authPersistenceReady } from '@/lib/firebase';
+import { auth, authPersistenceReady, getFirebaseAuth } from '@/lib/firebase';
 import {
   createSyncedUserFromFirebaseUser,
   canonicalIndianPhoneNumber,
@@ -132,6 +132,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     let isActive = true;
 
+    if (!auth) {
+      setLoading(false);
+      return () => {
+        isActive = false;
+      };
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (nextFirebaseUser) => {
       if (!isActive) {
         return;
@@ -203,6 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginWithEmail = React.useCallback(async (email: string, password: string) => {
     await authPersistenceReady.catch(() => undefined);
+    const firebaseAuth = getFirebaseAuth();
 
     const trimmedEmail = email.trim().toLowerCase();
 
@@ -215,7 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const credential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
+      const credential = await signInWithEmailAndPassword(firebaseAuth, trimmedEmail, password);
       const syncedUser = await resolveFirebaseSession(credential.user);
       setAppUser(syncedUser);
       return syncedUser;
@@ -226,12 +234,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginWithGoogle = React.useCallback(async () => {
     await authPersistenceReady.catch(() => undefined);
+    const firebaseAuth = getFirebaseAuth();
 
     const googleProvider = new GoogleAuthProvider();
     googleProvider.setCustomParameters({ prompt: 'select_account' });
 
     try {
-      const credential = await signInWithPopup(auth, googleProvider);
+      const credential = await signInWithPopup(firebaseAuth, googleProvider);
       const syncedUser = await resolveFirebaseSession(credential.user);
       setAppUser(syncedUser);
       return syncedUser;
@@ -241,7 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [resolveFirebaseSession]);
 
   const completeOnboarding = React.useCallback(async (values: StudentOnboardingInput) => {
-    const currentFirebaseUser = auth.currentUser;
+    const currentFirebaseUser = auth?.currentUser;
 
     if (!currentFirebaseUser) {
       throw new Error('You must be signed in to complete onboarding.');

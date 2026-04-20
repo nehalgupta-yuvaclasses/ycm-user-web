@@ -77,7 +77,7 @@ function formatRelativeTime(dateIso: string) {
 }
 
 async function resolveStudentContext(): Promise<StudentContext> {
-  const firebaseUser = auth.currentUser;
+  const firebaseUser = auth?.currentUser;
 
   if (firebaseUser) {
     const { data: student } = await supabase

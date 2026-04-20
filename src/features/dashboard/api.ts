@@ -193,7 +193,7 @@ function getIdentity(context: StudentContext): DashboardIdentity {
 }
 
 async function resolveStudentContext(): Promise<StudentContext> {
-  const firebaseUser = auth.currentUser;
+  const firebaseUser = auth?.currentUser;
 
   if (!firebaseUser) {
     throw new Error('You must be signed in to view the dashboard.');

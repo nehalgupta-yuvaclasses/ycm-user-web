@@ -21,6 +21,10 @@ export interface CourseLesson {
   video_url: string | null;
   live_url: string | null;
   notes: string | null;
+  is_live: boolean;
+  live_started_at: string | null;
+  live_ended_at: string | null;
+  live_by: string | null;
   order: number;
 }
 

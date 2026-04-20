@@ -63,7 +63,7 @@ function splitName(fullName: string) {
 }
 
 async function resolveContext() {
-  const firebaseUser = auth.currentUser;
+  const firebaseUser = auth?.currentUser;
 
   if (!firebaseUser) {
     throw new Error('You must be signed in to view your profile.');
@@ -122,7 +122,7 @@ export async function fetchProfile(): Promise<ProfileData> {
 }
 
 export async function updateProfile(values: ProfileFormValues) {
-  const firebaseUser = auth.currentUser;
+  const firebaseUser = auth?.currentUser;
 
   if (!firebaseUser) {
     throw new Error('You must be signed in to update your profile.');

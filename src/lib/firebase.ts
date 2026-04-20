@@ -1,5 +1,6 @@
 import { getApp, getApps, initializeApp, type FirebaseOptions } from 'firebase/app';
 import { browserLocalPersistence, getAuth, setPersistence } from 'firebase/auth';
+import type { Auth } from 'firebase/auth';
 
 const firebaseConfig: FirebaseOptions = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -18,9 +19,19 @@ if (!hasConfig) {
 }
 
 export const firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-export const auth = getAuth(firebaseApp);
+export const auth: Auth | null = hasConfig ? getAuth(firebaseApp) : null;
 
-export const authPersistenceReady = setPersistence(auth, browserLocalPersistence).catch((error) => {
-  console.error('Failed to configure Firebase auth persistence.', error);
-  return undefined;
-});
+export function getFirebaseAuth() {
+  if (!auth) {
+    throw new Error('Missing Firebase environment variables. Configure VITE_FIREBASE_* values before using auth.');
+  }
+
+  return auth;
+}
+
+export const authPersistenceReady = auth
+  ? setPersistence(auth, browserLocalPersistence).catch((error) => {
+      console.error('Failed to configure Firebase auth persistence.', error);
+      return undefined;
+    })
+  : Promise.resolve(undefined);
