@@ -219,6 +219,8 @@ export async function sendPhoneOtp(phoneNumber: string): Promise<PhoneOtpSendRes
     throw new Error('Enter a valid 10-digit Indian phone number.');
   }
 
+  clearPhoneRecaptchaVerifier();
+
   await authPersistenceReady.catch(() => undefined);
 
   const verifier = await getPhoneRecaptchaVerifier();
