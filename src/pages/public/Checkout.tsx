@@ -80,7 +80,7 @@ export default function Checkout() {
       }
 
       try {
-        const firebaseToken = await firebaseUser?.getIdToken();
+        const firebaseToken = await firebaseUser?.getIdToken(true);
         const settings = await fetchPublicPaymentSettings(firebaseToken ? { Authorization: `Bearer ${firebaseToken}` } : undefined);
         setGstRate(settings.gstRate || 18);
 
@@ -122,7 +122,7 @@ export default function Checkout() {
     setErrorMessage('');
 
     try {
-      const firebaseToken = await firebaseUser?.getIdToken();
+      const firebaseToken = await firebaseUser?.getIdToken(true);
       const isRazorpayReady = await loadRazorpayScript();
       if (!isRazorpayReady || !window.Razorpay) {
         throw new Error('Razorpay checkout failed to load.');
