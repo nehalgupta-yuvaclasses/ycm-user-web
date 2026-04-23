@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
-import { fetchCourses, fetchFeaturedCourses, fetchCourseById, fetchCourseCurriculum } from './api';
+import { fetchCourses, fetchFeaturedCourses, fetchCourseById, fetchCourseCurriculum, fetchCourseEnrollment } from './api';
 import { CourseLesson, CourseSubject } from './types';
 
 export function useCourses(sortBy: string = 'popular') {
@@ -163,6 +163,44 @@ export function useCourseCurriculum(courseId: string) {
       cleanup?.();
     };
   }, [courseId, moduleIdsKey, queryClient]);
+
+  return query;
+}
+
+export function useCourseEnrollment(courseId: string, userId: string | null, studentId: string | null) {
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ['courses', courseId, 'enrollment', userId, studentId],
+    queryFn: () => fetchCourseEnrollment(courseId, userId, studentId),
+    enabled: !!courseId && (Boolean(userId) || Boolean(studentId)),
+  });
+
+  useEffect(() => {
+    if (!courseId || (!userId && !studentId)) {
+      return;
+    }
+
+    const channel = supabase.channel(`public:course-enrollment:${courseId}:${userId ?? studentId}`);
+
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'enrollments',
+        filter: userId ? `user_id=eq.${userId}` : `student_id=eq.${studentId}`,
+      },
+      () => {
+        queryClient.invalidateQueries({ queryKey: ['courses', courseId, 'enrollment', userId, studentId] });
+      }
+    );
+
+    void channel.subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [courseId, queryClient, studentId, userId]);
 
   return query;
 }

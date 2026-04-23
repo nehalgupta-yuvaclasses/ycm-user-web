@@ -92,3 +92,33 @@ export async function fetchCourseCurriculum(courseId: string) {
 
   return (Array.isArray(data) ? data : []) as CourseSubject[];
 }
+
+type EnrollmentRow = {
+  id: string;
+  course_id: string | null;
+  student_id: string | null;
+  user_id: string | null;
+  payment_status: string | null;
+};
+
+export async function fetchCourseEnrollment(courseId: string, userId: string | null, studentId: string | null) {
+  if (!courseId || (!userId && !studentId)) {
+    return null;
+  }
+
+  const filters = [
+    userId ? `user_id.eq.${userId}` : null,
+    studentId ? `student_id.eq.${studentId}` : null,
+  ].filter(Boolean).join(',');
+
+  const { data, error } = await supabase
+    .from('enrollments')
+    .select('id, course_id, student_id, user_id, payment_status')
+    .eq('course_id', courseId)
+    .or(filters)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return (data as EnrollmentRow | null) ?? null;
+}

@@ -41,6 +41,7 @@ type ResourceRow = {
 type PaymentRow = {
   id: string;
   student_id: string | null;
+  user_id: string | null;
   amount: number;
   status: string | null;
   created_at: string;
@@ -179,8 +180,8 @@ export async function fetchPaymentsOverview(): Promise<PaymentsOverview> {
   const [paymentsResponse, purchasesResponse] = await Promise.all([
     supabase
       .from('payments')
-      .select('id, student_id, amount, status, created_at, course_id')
-      .eq('student_id', userId)
+      .select('id, student_id, user_id, amount, status, created_at, course_id')
+      .or(`student_id.eq.${userId},user_id.eq.${userId}`)
       .order('created_at', { ascending: false }),
     supabase
       .from('resource_purchases')
