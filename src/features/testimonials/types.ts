@@ -12,7 +12,7 @@ export interface Achiever {
   name: string;
   score: string;
   exam: string;
-  year: number;
+  year: string;
   image_url: string | null;
   created_at: string;
 }

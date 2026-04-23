@@ -20,7 +20,7 @@ export async function fetchTestimonials(): Promise<Testimonial[]> {
 export async function fetchAchievers(): Promise<Achiever[]> {
   const { data, error } = await supabase
     .from('results')
-    .select('id, student_name, exam, rank, image_url, created_at')
+    .select('*')
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -30,7 +30,7 @@ export async function fetchAchievers(): Promise<Achiever[]> {
     name: item.student_name,
     score: item.rank,
     exam: item.exam,
-    year: new Date(item.created_at).getFullYear(),
+    year: item.year || new Date(item.created_at).getFullYear().toString(),
     image_url: item.image_url,
     created_at: item.created_at
   }));
