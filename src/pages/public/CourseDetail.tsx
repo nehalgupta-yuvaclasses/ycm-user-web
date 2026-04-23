@@ -30,6 +30,55 @@ function formatCount(value: number) {
   return new Intl.NumberFormat('en-IN').format(value);
 }
 
+function isRecordedLessonReady(lesson: any) {
+  return Boolean(
+    lesson?.can_play ||
+    lesson?.is_recorded_ready ||
+    (lesson?.lesson_type === 'recorded' && (lesson?.youtube_recording_url || lesson?.video_url))
+  );
+}
+
+function canPlayLesson(lesson: any) {
+  return Boolean(lesson?.can_play ?? (isLiveLesson(lesson) || isRecordedLessonReady(lesson)));
+}
+
+function resolveYouTubeEmbedUrl(rawUrl?: string | null) {
+  if (!rawUrl) {
+    return '';
+  }
+
+  try {
+    const parsed = new URL(rawUrl);
+    const host = parsed.hostname.replace(/^www\./, '');
+
+    if (host === 'youtu.be') {
+      const videoId = parsed.pathname.split('/').filter(Boolean)[0];
+      return videoId ? `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1` : rawUrl;
+    }
+
+    if (host.endsWith('youtube.com')) {
+      const embedMatch = parsed.pathname.match(/\/embed\/([^/?]+)/);
+      if (embedMatch?.[1]) {
+        return `https://www.youtube.com/embed/${embedMatch[1]}?rel=0&modestbranding=1`;
+      }
+
+      const videoId = parsed.searchParams.get('v');
+      if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`;
+      }
+
+      const liveMatch = parsed.pathname.match(/\/live\/([^/?]+)/);
+      if (liveMatch?.[1]) {
+        return `https://www.youtube.com/embed/${liveMatch[1]}?rel=0&modestbranding=1`;
+      }
+    }
+  } catch {
+    return rawUrl;
+  }
+
+  return rawUrl;
+}
+
 export default function CourseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -38,6 +87,7 @@ export default function CourseDetail() {
   const [expandedSubjects, setExpandedSubjects] = useState<string[]>([]);
   const [expandedModules, setExpandedModules] = useState<string[]>([]);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
 
   const { data: course, isLoading: isLoadingCourse, isError: isErrorCourse } = useCourse(id || '');
   const { data: curriculum, isLoading: isLoadingCurriculum } = useCourseCurriculum(id || '');
@@ -87,6 +137,32 @@ export default function CourseDetail() {
     return null;
   }, [curriculum, requestedLectureId]);
 
+  const activeLesson = useMemo(() => {
+    if (!curriculum) {
+      return null;
+    }
+
+    for (const subject of curriculum as any[]) {
+      for (const module of subject?.modules || []) {
+        const lesson = module?.lessons?.find((entry: any) => entry.id === (activeLessonId || requestedLectureId));
+        if (lesson) {
+          return lesson;
+        }
+      }
+    }
+
+    for (const subject of curriculum as any[]) {
+      for (const module of subject?.modules || []) {
+        const lesson = module?.lessons?.find((entry: any) => canPlayLesson(entry));
+        if (lesson) {
+          return lesson;
+        }
+      }
+    }
+
+    return null;
+  }, [activeLessonId, curriculum, requestedLectureId]);
+
   useEffect(() => {
     if (!lectureTarget?.moduleId || !lectureTarget.subjectId) {
       return;
@@ -102,6 +178,22 @@ export default function CourseDetail() {
 
     return () => window.clearTimeout(timer);
   }, [lectureTarget]);
+
+  useEffect(() => {
+    if (activeLessonId || !curriculum) {
+      return;
+    }
+
+    for (const subject of curriculum as any[]) {
+      for (const module of subject?.modules || []) {
+        const lesson = module?.lessons?.find((entry: any) => canPlayLesson(entry));
+        if (lesson) {
+          setActiveLessonId(lesson.id);
+          return;
+        }
+      }
+    }
+  }, [activeLessonId, curriculum]);
 
   const toggleSubject = (subjectId: string) => {
     setExpandedSubjects((current) =>
@@ -119,6 +211,17 @@ export default function CourseDetail() {
     } else {
       openAuthModal();
     }
+  };
+
+  const handleSelectLesson = (lesson: any) => {
+    if (!canPlayLesson(lesson)) {
+      return;
+    }
+
+    setActiveLessonId(lesson.id);
+    window.setTimeout(() => {
+      document.getElementById('lesson-player')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
   };
 
   if (isLoadingCourse) {
@@ -269,6 +372,42 @@ export default function CourseDetail() {
                   </div>
                 ))}
               </div>
+
+              <section id="lesson-player" className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl font-semibold tracking-tight text-zinc-950">
+                      {activeLesson?.lesson_type === 'live' ? 'Live class' : 'Recorded lesson'}
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-zinc-600">
+                      {activeLesson?.lesson_type === 'live'
+                        ? 'The live session is embedded here and updates with lesson state changes.'
+                        : 'Recorded playback appears here once the lesson is marked ready.'}
+                    </p>
+                  </div>
+                  {activeLesson ? (
+                    <div className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-600">
+                      {isLiveLesson(activeLesson) ? 'LIVE' : 'RECORDED READY'}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="mt-6 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-950">
+                  {activeLesson ? (
+                    <iframe
+                      title={activeLesson.title}
+                      className="aspect-video w-full"
+                      src={resolveYouTubeEmbedUrl(activeLesson.youtube_live_url || activeLesson.live_url || activeLesson.youtube_recording_url || activeLesson.video_url)}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <div className="flex aspect-video items-center justify-center px-6 text-center text-sm text-zinc-300">
+                      Select a live class or a ready recording to start watching.
+                    </div>
+                  )}
+                </div>
+              </section>
             </section>
 
             <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
@@ -379,12 +518,12 @@ export default function CourseDetail() {
                                                           </div>
 
                                                           <div className="flex shrink-0 items-center gap-3">
-                                                            {isLiveLesson(lesson) && lesson.live_url ? (
+                                                            {canPlayLesson(lesson) ? (
                                                               <button
-                                                                onClick={() => window.open(lesson.live_url, '_blank', 'noopener,noreferrer')}
+                                                                onClick={() => handleSelectLesson(lesson)}
                                                                 className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-900 hover:text-white"
                                                               >
-                                                                Join class
+                                                                {isLiveLesson(lesson) ? 'Watch live' : 'Watch recording'}
                                                               </button>
                                                             ) : (
                                                               <Lock className="h-3.5 w-3.5 text-zinc-300" />
