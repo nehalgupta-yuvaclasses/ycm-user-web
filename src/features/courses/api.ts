@@ -106,19 +106,31 @@ export async function fetchCourseEnrollment(courseId: string, userId: string | n
     return null;
   }
 
-  const filters = [
-    userId ? `user_id.eq.${userId}` : null,
-    studentId ? `student_id.eq.${studentId}` : null,
-  ].filter(Boolean).join(',');
+  const query = 'id, course_id, student_id, user_id, payment_status';
 
-  const { data, error } = await supabase
-    .from('enrollments')
-    .select('id, course_id, student_id, user_id, payment_status')
-    .eq('course_id', courseId)
-    .or(filters)
-    .maybeSingle();
+  if (userId) {
+    const { data, error } = await supabase
+      .from('enrollments')
+      .select(query)
+      .eq('course_id', courseId)
+      .eq('user_id', userId)
+      .maybeSingle();
 
-  if (error) throw error;
+    if (error) throw error;
+    if (data) return data as EnrollmentRow;
+  }
 
-  return (data as EnrollmentRow | null) ?? null;
+  if (studentId) {
+    const { data, error } = await supabase
+      .from('enrollments')
+      .select(query)
+      .eq('course_id', courseId)
+      .eq('student_id', studentId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (data) return data as EnrollmentRow;
+  }
+
+  return null;
 }
