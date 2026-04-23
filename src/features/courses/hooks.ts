@@ -59,6 +59,16 @@ export function useCourseCurriculum(courseId: string) {
         return subjects;
       }
 
+        const canPlay = Boolean(
+          lessonRow.is_preview ??
+          lessonRow.is_live ??
+          lessonRow.is_recorded_ready ??
+          lessonRow.youtube_live_url ??
+          lessonRow.youtube_recording_url ??
+          lessonRow.live_url ??
+          lessonRow.video_url
+        );
+
       const lesson: CourseLesson = {
         id: String(lessonRow.id ?? ''),
         module_id: moduleId,
@@ -67,9 +77,14 @@ export function useCourseCurriculum(courseId: string) {
         duration: lessonRow.duration == null ? null : String(lessonRow.duration),
         scheduled_at: lessonRow.scheduled_at == null ? null : String(lessonRow.scheduled_at),
         video_url: lessonRow.video_url == null ? null : String(lessonRow.video_url),
+        youtube_live_url: lessonRow.youtube_live_url == null ? null : String(lessonRow.youtube_live_url),
+        youtube_recording_url: lessonRow.youtube_recording_url == null ? null : String(lessonRow.youtube_recording_url),
         live_url: lessonRow.live_url == null ? null : String(lessonRow.live_url),
         notes: lessonRow.notes == null ? null : String(lessonRow.notes),
         is_live: Boolean(lessonRow.is_live),
+        is_preview: Boolean(lessonRow.is_preview),
+        is_recorded_ready: Boolean(lessonRow.is_recorded_ready),
+        can_play: canPlay,
         live_started_at: lessonRow.live_started_at == null ? null : String(lessonRow.live_started_at),
         live_ended_at: lessonRow.live_ended_at == null ? null : String(lessonRow.live_ended_at),
         live_by: lessonRow.live_by == null ? null : String(lessonRow.live_by),
@@ -109,27 +124,43 @@ export function useCourseCurriculum(courseId: string) {
       }));
     };
 
-    const channel = supabase.channel(`public:course-curriculum:${courseId}`);
-
-    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'lessons' }, (payload) => {
-      const raw = payload.eventType === 'DELETE' ? payload.old : payload.new;
-      if (!raw || typeof raw !== 'object') {
+    const bootRealtime = async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData.user) {
         return;
       }
 
-      queryClient.setQueryData<CourseSubject[]>(queryKey, (current) => {
-        if (!current) {
-          return current;
+      const channel = supabase.channel(`public:course-curriculum:${courseId}`);
+
+      channel.on('postgres_changes', { event: '*', schema: 'public', table: 'lessons' }, (payload) => {
+        const raw = payload.eventType === 'DELETE' ? payload.old : payload.new;
+        if (!raw || typeof raw !== 'object') {
+          return;
         }
 
-        return patchLesson(current, raw as Record<string, unknown>, payload.eventType);
+        queryClient.setQueryData<CourseSubject[]>(queryKey, (current) => {
+          if (!current) {
+            return current;
+          }
+
+          return patchLesson(current, raw as Record<string, unknown>, payload.eventType);
+        });
       });
+
+      void channel.subscribe();
+
+      return () => {
+        void supabase.removeChannel(channel);
+      };
+    };
+
+    let cleanup: (() => void) | undefined;
+    void bootRealtime().then((dispose) => {
+      cleanup = dispose;
     });
 
-    void channel.subscribe();
-
     return () => {
-      void supabase.removeChannel(channel);
+      cleanup?.();
     };
   }, [courseId, moduleIdsKey, queryClient]);
 

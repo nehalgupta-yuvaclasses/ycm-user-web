@@ -19,9 +19,13 @@ export interface CourseLesson {
   duration: string | null;
   scheduled_at: string | null;
   video_url: string | null;
+  youtube_live_url?: string | null;
+  youtube_recording_url?: string | null;
   live_url: string | null;
   notes: string | null;
   is_live: boolean;
+  is_recorded_ready?: boolean;
+  can_play?: boolean;
   live_started_at: string | null;
   live_ended_at: string | null;
   live_by: string | null;
