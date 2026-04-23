@@ -2,7 +2,7 @@ export interface Course {
   id: string;
   title: string;
   description: string | null;
-  status: 'Published' | 'Draft';
+  status: "Published" | "Draft";
   thumbnail_url: string | null;
   students_count: number;
   created_at: string;
@@ -15,7 +15,7 @@ export interface CourseLesson {
   id: string;
   module_id: string;
   title: string;
-  lesson_type: 'recorded' | 'live';
+  lesson_type: "recorded" | "live";
   duration: string | null;
   scheduled_at: string | null;
   video_url: string | null;
@@ -24,6 +24,7 @@ export interface CourseLesson {
   live_url: string | null;
   notes: string | null;
   is_live: boolean;
+  is_preview?: boolean;
   is_recorded_ready?: boolean;
   can_play?: boolean;
   live_started_at: string | null;
