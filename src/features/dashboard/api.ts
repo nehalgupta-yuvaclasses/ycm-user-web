@@ -42,6 +42,8 @@ type EnrollmentRow = {
   id: string;
   created_at: string;
   course_id: string | null;
+  student_id: string | null;
+  user_id: string | null;
 };
 
 type TestRow = {
@@ -291,11 +293,16 @@ export async function fetchStudentDashboard(): Promise<DashboardOverview> {
     };
   }
 
+  const enrollmentFilters = [
+    context.authUser?.id ? `user_id.eq.${context.authUser.id}` : null,
+    context.student?.id ? `student_id.eq.${context.student.id}` : null,
+  ].filter(Boolean).join(',');
+
   const [enrollmentsResponse, attemptsResponse] = await Promise.all([
     supabase
       .from('enrollments')
-      .select('id, created_at, course_id')
-      .eq('student_id', context.student.id)
+      .select('id, created_at, course_id, student_id, user_id')
+      .or(enrollmentFilters)
       .order('created_at', { ascending: false }),
     supabase
       .from('attempts')

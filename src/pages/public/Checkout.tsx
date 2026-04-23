@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, ChevronRight, Loader2, RefreshCcw, ShieldCheck, XCircle } from 'lucide-react';
 import { useAuthModal } from '@/contexts/AuthContext';
 import { useCourse } from '@/features/courses/hooks';
+import { useCourseEnrollment } from '@/features/courses/hooks';
 import { createRazorpayOrder, fetchPublicPaymentSettings, verifyRazorpayPayment } from '@/features/payments/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -43,6 +44,7 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { user, firebaseUser, openAuthModal } = useAuthModal();
   const { data: course, isLoading: isLoadingCourse, isError } = useCourse(courseId || '');
+  const { data: enrollment } = useCourseEnrollment(courseId || '', user?.firebaseUid ?? null, user?.studentId ?? null);
   const [state, setState] = useState<CheckoutState>('loading');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [gstRate, setGstRate] = useState(18);
@@ -63,6 +65,12 @@ export default function Checkout() {
       if (!courseId) {
         setState('error');
         setErrorMessage('Invalid course selected.');
+        return;
+      }
+
+      if (enrollment) {
+        setState('success');
+        setErrorMessage('You are already enrolled in this course.');
         return;
       }
 
@@ -90,7 +98,7 @@ export default function Checkout() {
     }
 
     void bootstrap();
-  }, [courseId, user, firebaseUser]);
+  }, [courseId, enrollment, user, firebaseUser]);
 
   async function startCheckout() {
     if (!user) {
@@ -101,6 +109,11 @@ export default function Checkout() {
     if (!course) {
       setState('error');
       setErrorMessage('Course details are not available yet.');
+      return;
+    }
+
+    if (enrollment) {
+      navigate(`/course/${course.id}`);
       return;
     }
 
@@ -254,9 +267,9 @@ export default function Checkout() {
               ) : null}
 
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Button className="h-12 gap-2 rounded-xl px-6" onClick={startCheckout} disabled={isLaunching || state === 'processing'}>
+                <Button className="h-12 gap-2 rounded-xl px-6" onClick={startCheckout} disabled={isLaunching || state === 'processing' || Boolean(enrollment)}>
                   {isLaunching || state === 'processing' ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  {user ? 'Pay now' : 'Sign in to continue'}
+                  {enrollment ? 'Open course' : user ? 'Pay now' : 'Sign in to continue'}
                   <ChevronRight className="h-4 w-4" />
                 </Button>
                 <Button variant="outline" className="h-12 rounded-xl px-6" onClick={() => navigate(`/course/${course.id}`)}>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { useCourse, useCourseCurriculum } from '@/features/courses/hooks';
+import { useCourse, useCourseCurriculum, useCourseEnrollment } from '@/features/courses/hooks';
 import {
   Clock,
   Globe,
@@ -91,6 +91,8 @@ export default function CourseDetail() {
 
   const { data: course, isLoading: isLoadingCourse, isError: isErrorCourse } = useCourse(id || '');
   const { data: curriculum, isLoading: isLoadingCurriculum } = useCourseCurriculum(id || '');
+  const { data: enrollment } = useCourseEnrollment(id || '', user?.firebaseUid ?? null, user?.studentId ?? null);
+  const isEnrolled = Boolean(enrollment);
   const requestedLectureId = searchParams.get('lecture');
 
   const curriculumSummary = useMemo(() => {
@@ -180,7 +182,7 @@ export default function CourseDetail() {
   }, [lectureTarget]);
 
   useEffect(() => {
-    if (activeLessonId || !curriculum) {
+    if (!isEnrolled || activeLessonId || !curriculum) {
       return;
     }
 
@@ -193,7 +195,7 @@ export default function CourseDetail() {
         }
       }
     }
-  }, [activeLessonId, curriculum]);
+  }, [activeLessonId, curriculum, isEnrolled]);
 
   const toggleSubject = (subjectId: string) => {
     setExpandedSubjects((current) =>
@@ -206,6 +208,11 @@ export default function CourseDetail() {
   };
 
   const handleEnrollClick = () => {
+    if (isEnrolled) {
+      document.getElementById('lesson-player')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
     if (user) {
       navigate(`/checkout/${course.id}`);
     } else {
@@ -214,7 +221,7 @@ export default function CourseDetail() {
   };
 
   const handleSelectLesson = (lesson: any) => {
-    if (!canPlayLesson(lesson)) {
+    if (!isEnrolled || !canPlayLesson(lesson)) {
       return;
     }
 
@@ -255,7 +262,7 @@ export default function CourseDetail() {
     { label: 'Students enrolled', value: formatCount(course.students_count) },
     { label: 'Curriculum', value: `${formatCount(curriculumSummary.subjects)} subjects` },
     { label: 'Format', value: curriculumSummary.liveLessons > 0 ? 'Live and recorded' : 'Recorded' },
-    { label: 'Access', value: '12 months' },
+    { label: 'Access', value: isEnrolled ? 'Unlocked' : 'Buy to unlock' },
   ];
 
   const learningPoints = [
@@ -278,7 +285,7 @@ export default function CourseDetail() {
           </button>
           <div className="flex items-center gap-2 text-sm text-zinc-500">
             <ShieldCheck className="h-4 w-4 text-emerald-600" />
-            Secure checkout after enrollment
+            {isEnrolled ? 'Course unlocked' : 'Secure checkout after enrollment'}
           </div>
         </div>
 
@@ -385,7 +392,7 @@ export default function CourseDetail() {
                         : 'Recorded playback appears here once the lesson is marked ready.'}
                     </p>
                   </div>
-                  {activeLesson ? (
+                  {isEnrolled && activeLesson ? (
                     <div className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-600">
                       {isLiveLesson(activeLesson) ? 'LIVE' : 'RECORDED READY'}
                     </div>
@@ -393,7 +400,7 @@ export default function CourseDetail() {
                 </div>
 
                 <div className="mt-6 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-950">
-                  {activeLesson ? (
+                  {isEnrolled && activeLesson ? (
                     <iframe
                       title={activeLesson.title}
                       className="aspect-video w-full"
@@ -403,7 +410,7 @@ export default function CourseDetail() {
                     />
                   ) : (
                     <div className="flex aspect-video items-center justify-center px-6 text-center text-sm text-zinc-300">
-                      Select a live class or a ready recording to start watching.
+                      {isEnrolled ? 'Select a live class or a ready recording to start watching.' : 'Enroll to unlock the lesson player.'}
                     </div>
                   )}
                 </div>
@@ -518,7 +525,7 @@ export default function CourseDetail() {
                                                           </div>
 
                                                           <div className="flex shrink-0 items-center gap-3">
-                                                            {canPlayLesson(lesson) ? (
+                                                            {isEnrolled && canPlayLesson(lesson) ? (
                                                               <button
                                                                 onClick={() => handleSelectLesson(lesson)}
                                                                 className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-900 hover:text-white"
@@ -662,7 +669,7 @@ export default function CourseDetail() {
                   onClick={handleEnrollClick}
                   className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-zinc-950 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
                 >
-                  {user ? 'Enroll now' : 'Sign in to enroll'}
+                  {isEnrolled ? 'Open course' : user ? 'Enroll now' : 'Sign in to enroll'}
                 </button>
 
                 <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600">

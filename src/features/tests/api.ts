@@ -139,11 +139,16 @@ export async function fetchTestSeriesOverview(): Promise<TestSeriesOverview> {
     };
   }
 
+  const enrollmentFilters = [
+    context.authUser?.id ? `user_id.eq.${context.authUser.id}` : null,
+    context.student?.id ? `student_id.eq.${context.student.id}` : null,
+  ].filter(Boolean).join(',');
+
   const [enrollmentsResponse, attemptsResponse] = await Promise.all([
     supabase
       .from('enrollments')
-      .select('course_id')
-      .eq('student_id', context.student.id),
+      .select('course_id, student_id, user_id')
+      .or(enrollmentFilters),
     supabase
       .from('attempts')
       .select('id, test_id, score, status, submitted_at')
