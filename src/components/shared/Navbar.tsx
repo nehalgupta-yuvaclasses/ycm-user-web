@@ -18,10 +18,12 @@ const NAV_LINKS = [
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { isAuthModalOpen, openAuthModal, closeAuthModal, loading, logout, user } = useAuthModal();
   const location = useLocation();
 
   const handleLogout = async () => {
+    setIsMenuOpen(false);
     await logout();
   };
 
@@ -126,14 +128,13 @@ export function Navbar() {
 
         {/* Mobile Menu */}
         <div className="md:hidden flex items-center gap-2">
-          <Sheet>
-            <SheetTrigger
-              render={
-                <Button variant="ghost" size="icon" className="text-zinc-900">
-                  <Menu className="w-6 h-6" />
-                </Button>
-              }
-            />
+          <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-zinc-900">
+                <Menu className="w-6 h-6" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px] p-0">
               <div className="flex flex-col h-full">
                 <div className="p-6 border-b border-zinc-100">
@@ -154,6 +155,7 @@ export function Navbar() {
                         <a
                           key={link.name}
                           href={link.href}
+                          onClick={() => setIsMenuOpen(false)}
                           className="text-lg font-medium text-zinc-600 hover:text-zinc-900 py-3 transition-colors"
                         >
                           {link.name}
@@ -162,6 +164,7 @@ export function Navbar() {
                         <Link
                           key={link.name}
                           to={link.href}
+                          onClick={() => setIsMenuOpen(false)}
                           className={cn(
                             "text-lg font-medium py-3 transition-colors",
                             location.pathname === link.href 
@@ -188,7 +191,7 @@ export function Navbar() {
                         </Button>
                     ) : (
                       <div className="flex flex-col gap-3">
-                        <Link to="/dashboard" className="w-full">
+                        <Link to="/dashboard" className="w-full" onClick={() => setIsMenuOpen(false)}>
                           <Button className="w-full h-12 text-lg font-semibold bg-zinc-900 text-white hover:bg-zinc-800 gap-2">
                             <GraduationCap className="w-5 h-5" />
                             My Dashboard

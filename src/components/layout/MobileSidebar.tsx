@@ -21,7 +21,7 @@ export function MobileSidebar({ open, onOpenChange, onLogout }: MobileSidebarPro
         <div className="flex h-full flex-col">
           <SheetHeader className="border-b border-border px-4 py-4">
             <SheetTitle className="sr-only">Navigation</SheetTitle>
-            <Link to="/dashboard" className="flex items-center gap-3">
+            <Link to="/dashboard" className="flex items-center gap-3" onClick={() => onOpenChange(false)}>
               <div className="flex size-9 items-center justify-center rounded-md border border-border bg-muted/40 text-foreground">
                 <GraduationCap className="size-4" />
               </div>

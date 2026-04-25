@@ -50,6 +50,7 @@ export function DashboardLayout() {
   };
 
   const handleLogout = async () => {
+    setIsMobileSidebarOpen(false);
     await logout();
     navigate('/');
   };
