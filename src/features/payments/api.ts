@@ -77,11 +77,11 @@ async function resolveUserId() {
 async function invokePaymentFunction<T>(
   action: string,
   payload: Record<string, unknown> = {},
-  headers: Headers | null = null,
+  extraHeaders: Record<string, string> | null = null,
 ) {
   const { data, error } = await supabase.functions.invoke("razorpay-payments", {
-    body: { action, ...(payload as Record<string, unknown>) },
-    headers: headers ?? undefined,
+    body: { action, ...payload },
+    headers: extraHeaders ?? undefined,
   });
 
   if (error) {
@@ -95,35 +95,41 @@ async function invokePaymentFunction<T>(
   return data as T;
 }
 
-export async function fetchPublicPaymentSettings(headers?: HeadersInit) {
+export async function fetchPublicPaymentSettings(
+  extraHeaders?: Record<string, string>,
+) {
   return invokePaymentFunction<PublicPaymentSettings>(
     "get_public_payment_settings",
     {},
-    headers,
+    extraHeaders,
   );
 }
 
 export async function createRazorpayOrder(
   payload: { courseId: string; amount: number },
-  headers?: HeadersInit,
+  extraHeaders?: Record<string, string>,
 ) {
   return invokePaymentFunction<RazorpayOrderResponse>(
     "create_razorpay_order",
     payload,
-    headers,
+    extraHeaders,
   );
 }
 
 export async function verifyRazorpayPayment(
   payload: RazorpayVerifyPayload,
-  headers?: HeadersInit,
+  extraHeaders?: Record<string, string>,
 ) {
   return invokePaymentFunction<{
     success: boolean;
     paymentId: string;
     orderId: string;
     courseId: string;
-  }>("verify_payment", payload as Record<string, unknown>, headers);
+  }>(
+    "verify_payment",
+    payload as unknown as Record<string, unknown>,
+    extraHeaders,
+  );
 }
 
 function mapTransactions(

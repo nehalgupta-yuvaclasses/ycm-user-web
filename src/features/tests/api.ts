@@ -1,6 +1,20 @@
-import { supabase } from '@/lib/supabaseClient';
-import { auth } from '@/lib/firebase';
-import type { InsightItem, PerformanceItem, ReadyTestItem, TestSeriesOverview, TestSeriesStats } from './types';
+import { supabase } from "@/lib/supabaseClient";
+import { auth } from "@/lib/firebase";
+import type {
+  InsightItem,
+  PerformanceItem,
+  ReadyTestItem,
+  TestSeriesOverview,
+  TestSeriesStats,
+} from "./types";
+
+// Helper: fast UUID v4 check (8-4-4-4-12 pattern)
+function isPossibleUuid(value: string | null | undefined): value is string {
+  if (!value) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
 
 type AuthUser = {
   id: string;
@@ -57,7 +71,7 @@ type StudentContext = {
 function formatRelativeTime(dateIso: string) {
   const date = new Date(dateIso);
   if (Number.isNaN(date.getTime())) {
-    return 'Recently';
+    return "Recently";
   }
 
   const diffMs = Date.now() - date.getTime();
@@ -65,14 +79,14 @@ function formatRelativeTime(dateIso: string) {
   const diffHours = Math.floor(diffMinutes / 60);
   const diffDays = Math.floor(diffHours / 24);
 
-  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 1) return "Just now";
   if (diffMinutes < 60) return `${diffMinutes}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
 
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
   }).format(date);
 }
 
@@ -81,9 +95,9 @@ async function resolveStudentContext(): Promise<StudentContext> {
 
   if (firebaseUser) {
     const { data: student } = await supabase
-      .from('students')
-      .select('id, user_id, full_name, email')
-      .eq('email', firebaseUser.email ?? '')
+      .from("students")
+      .select("id, user_id, full_name, email")
+      .eq("email", firebaseUser.email ?? "")
       .maybeSingle();
 
     return {
@@ -95,12 +109,12 @@ async function resolveStudentContext(): Promise<StudentContext> {
     };
   }
 
-  throw new Error('You must be signed in to view tests.');
+  throw new Error("You must be signed in to view tests.");
 }
 
 function formatDuration(duration: number | null) {
   if (!duration) {
-    return 'Self-paced';
+    return "Self-paced";
   }
 
   return `${duration} mins`;
@@ -115,16 +129,19 @@ function scorePercent(score: number | null, totalMarks: number | null) {
     return Math.max(0, Math.min(100, score ?? 0));
   }
 
-  return Math.max(0, Math.min(100, Math.round(((score ?? 0) / totalMarks) * 100)));
+  return Math.max(
+    0,
+    Math.min(100, Math.round(((score ?? 0) / totalMarks) * 100)),
+  );
 }
 
 function detectTypeLabel(testTitle: string, questionCount: number) {
   const title = testTitle.toLowerCase();
-  if (title.includes('sectional') || questionCount <= 30) {
-    return 'Sectional';
+  if (title.includes("sectional") || questionCount <= 30) {
+    return "Sectional";
   }
 
-  return 'Full';
+  return "Full";
 }
 
 export async function fetchTestSeriesOverview(): Promise<TestSeriesOverview> {
@@ -142,19 +159,24 @@ export async function fetchTestSeriesOverview(): Promise<TestSeriesOverview> {
   const enrollmentFilters = [
     context.authUser?.id ? `user_id.eq.${context.authUser.id}` : null,
     context.student?.id ? `student_id.eq.${context.student.id}` : null,
-  ].filter(Boolean).join(',');
+  ].filter(Boolean);
+
+  // For Firebase users (non-UUID), only use student_id filter
+  const finalFilters = isPossibleUuid(context.authUser?.id)
+    ? enrollmentFilters
+    : enrollmentFilters.filter((f) => f?.startsWith("student_id="));
 
   const [enrollmentsResponse, attemptsResponse] = await Promise.all([
     supabase
-      .from('enrollments')
-      .select('course_id, student_id, user_id')
-      .or(enrollmentFilters),
+      .from("enrollments")
+      .select("course_id, student_id, user_id")
+      .or(finalFilters.join(",")),
     supabase
-      .from('attempts')
-      .select('id, test_id, score, status, submitted_at')
-      .eq('student_id', context.student.id)
-      .eq('status', 'completed')
-      .order('submitted_at', { ascending: false }),
+      .from("attempts")
+      .select("id, test_id, score, status, submitted_at")
+      .eq("student_id", context.student.id)
+      .eq("status", "completed")
+      .order("submitted_at", { ascending: false }),
   ]);
 
   if (enrollmentsResponse.error) {
@@ -165,7 +187,9 @@ export async function fetchTestSeriesOverview(): Promise<TestSeriesOverview> {
     throw attemptsResponse.error;
   }
 
-  const courseIds = ((enrollmentsResponse.data ?? []) as Array<{ course_id: string | null }>)
+  const courseIds = (
+    (enrollmentsResponse.data ?? []) as Array<{ course_id: string | null }>
+  )
     .map((enrollment) => enrollment.course_id)
     .filter((courseId): courseId is string => Boolean(courseId));
 
@@ -179,17 +203,19 @@ export async function fetchTestSeriesOverview(): Promise<TestSeriesOverview> {
   }
 
   const [coursesResponse, testsResponse, subjectsResponse] = await Promise.all([
-    supabase.from('courses').select('id, title').in('id', courseIds),
+    supabase.from("courses").select("id, title").in("id", courseIds),
     supabase
-      .from('tests')
-      .select('id, course_id, subject_id, title, duration, total_marks, status, created_at')
-      .in('course_id', courseIds)
-      .eq('status', 'published')
-      .order('created_at', { ascending: false }),
+      .from("tests")
+      .select(
+        "id, course_id, subject_id, title, duration, total_marks, status, created_at",
+      )
+      .in("course_id", courseIds)
+      .eq("status", "published")
+      .order("created_at", { ascending: false }),
     supabase
-      .from('subjects')
-      .select('id, course_id, name')
-      .in('course_id', courseIds),
+      .from("subjects")
+      .select("id, course_id, name")
+      .in("course_id", courseIds),
   ]);
 
   if (coursesResponse.error) {
@@ -210,9 +236,13 @@ export async function fetchTestSeriesOverview(): Promise<TestSeriesOverview> {
   const attempts = (attemptsResponse.data as AttemptRow[] | null) ?? [];
 
   const testIds = tests.map((test) => test.id);
-  const questionsResponse = testIds.length > 0
-    ? await supabase.from('questions').select('id, test_id').in('test_id', testIds)
-    : { data: [], error: null };
+  const questionsResponse =
+    testIds.length > 0
+      ? await supabase
+          .from("questions")
+          .select("id, test_id")
+          .in("test_id", testIds)
+      : { data: [], error: null };
 
   if (questionsResponse.error) {
     throw questionsResponse.error;
@@ -226,7 +256,10 @@ export async function fetchTestSeriesOverview(): Promise<TestSeriesOverview> {
       return;
     }
 
-    questionsByTest.set(question.test_id, (questionsByTest.get(question.test_id) ?? 0) + 1);
+    questionsByTest.set(
+      question.test_id,
+      (questionsByTest.get(question.test_id) ?? 0) + 1,
+    );
   });
 
   const courseById = new Map(courses.map((course) => [course.id, course]));
@@ -235,20 +268,21 @@ export async function fetchTestSeriesOverview(): Promise<TestSeriesOverview> {
   const completedTestIds = new Set(
     attempts
       .map((attempt) => attempt.test_id)
-      .filter((testId): testId is string => Boolean(testId))
+      .filter((testId): testId is string => Boolean(testId)),
   );
 
   const readyTests = tests.map((test) => {
     const course = test.course_id ? courseById.get(test.course_id) : null;
     const subject = test.subject_id ? subjectById.get(test.subject_id) : null;
-    const resolvedSubject = subject && subject.course_id === test.course_id ? subject : null;
+    const resolvedSubject =
+      subject && subject.course_id === test.course_id ? subject : null;
     const questionCount = questionsByTest.get(test.id) ?? 0;
 
     return {
       id: test.id,
       title: test.title,
-      courseTitle: course?.title ?? 'Course',
-      subjectName: resolvedSubject?.name ?? 'General',
+      courseTitle: course?.title ?? "Course",
+      subjectName: resolvedSubject?.name ?? "General",
       typeLabel: detectTypeLabel(test.title, questionCount),
       durationLabel: formatDuration(test.duration),
       questionLabel: formatQuestionLabel(questionCount),
@@ -259,20 +293,26 @@ export async function fetchTestSeriesOverview(): Promise<TestSeriesOverview> {
 
   const recentPerformance = attempts
     .map((attempt) => {
-      const test = attempt.test_id ? tests.find((entry) => entry.id === attempt.test_id) : null;
+      const test = attempt.test_id
+        ? tests.find((entry) => entry.id === attempt.test_id)
+        : null;
       if (!test) {
         return null;
       }
 
       const percent = scorePercent(attempt.score, test.total_marks);
-      const scoreLabel = test.total_marks ? `${attempt.score ?? 0}/${test.total_marks}` : `${attempt.score ?? 0}`;
+      const scoreLabel = test.total_marks
+        ? `${attempt.score ?? 0}/${test.total_marks}`
+        : `${attempt.score ?? 0}`;
 
       return {
         id: attempt.id,
         title: test.title,
         scoreLabel,
         scorePercent: percent,
-        attemptedAtLabel: attempt.submitted_at ? formatRelativeTime(attempt.submitted_at) : 'Recently',
+        attemptedAtLabel: attempt.submitted_at
+          ? formatRelativeTime(attempt.submitted_at)
+          : "Recently",
         analysisHref: `/dashboard/tests/${test.id}`,
       } satisfies PerformanceItem;
     })
@@ -281,14 +321,19 @@ export async function fetchTestSeriesOverview(): Promise<TestSeriesOverview> {
 
   const subjectAverages = new Map<string, { total: number; count: number }>();
   attempts.forEach((attempt) => {
-    const test = attempt.test_id ? tests.find((entry) => entry.id === attempt.test_id) : null;
+    const test = attempt.test_id
+      ? tests.find((entry) => entry.id === attempt.test_id)
+      : null;
     const subject = test?.subject_id ? subjectById.get(test.subject_id) : null;
     if (!test?.subject_id || !subject || subject.course_id !== test.course_id) {
       return;
     }
 
     const percent = scorePercent(attempt.score, test.total_marks);
-    const current = subjectAverages.get(test.subject_id) ?? { total: 0, count: 0 };
+    const current = subjectAverages.get(test.subject_id) ?? {
+      total: 0,
+      count: 0,
+    };
     subjectAverages.set(test.subject_id, {
       total: current.total + percent,
       count: current.count + 1,
@@ -308,7 +353,12 @@ export async function fetchTestSeriesOverview(): Promise<TestSeriesOverview> {
         average: Math.round(entry.total / entry.count),
       };
     })
-    .filter((item): item is { subjectId: string; subjectName: string; average: number } => Boolean(item))
+    .filter(
+      (
+        item,
+      ): item is { subjectId: string; subjectName: string; average: number } =>
+        Boolean(item),
+    )
     .sort((left, right) => left.average - right.average);
 
   let insight: InsightItem | null = null;
@@ -317,37 +367,51 @@ export async function fetchTestSeriesOverview(): Promise<TestSeriesOverview> {
     const strongest = subjectScores[subjectScores.length - 1];
 
     if (weakest && weakest.average < 80) {
-      const weakTest = tests.find((test) => test.subject_id === weakest.subjectId && subjectById.get(test.subject_id ?? '')?.course_id === test.course_id);
+      const weakTest = tests.find(
+        (test) =>
+          test.subject_id === weakest.subjectId &&
+          subjectById.get(test.subject_id ?? "")?.course_id === test.course_id,
+      );
       insight = {
         title: `You are weak in ${weakest.subjectName}`,
-        description: `Accuracy is ${weakest.average}%. Revisit ${weakest.subjectName} before your next attempt.${strongest && strongest.subjectId !== weakest.subjectId ? ` You are stronger in ${strongest.subjectName} (${strongest.average}%).` : ''}`,
-        href: weakTest ? `/dashboard/tests/${weakTest.id}` : '/dashboard/tests',
+        description: `Accuracy is ${weakest.average}%. Revisit ${weakest.subjectName} before your next attempt.${strongest && strongest.subjectId !== weakest.subjectId ? ` You are stronger in ${strongest.subjectName} (${strongest.average}%).` : ""}`,
+        href: weakTest ? `/dashboard/tests/${weakTest.id}` : "/dashboard/tests",
       };
     } else if (strongest) {
-      const strongTest = tests.find((test) => test.subject_id === strongest.subjectId && subjectById.get(test.subject_id ?? '')?.course_id === test.course_id);
+      const strongTest = tests.find(
+        (test) =>
+          test.subject_id === strongest.subjectId &&
+          subjectById.get(test.subject_id ?? "")?.course_id === test.course_id,
+      );
       insight = {
         title: `Strong in ${strongest.subjectName}`,
         description: `Accuracy is ${strongest.average}%. Keep the momentum and target harder tests next.`,
-        href: strongTest ? `/dashboard/tests/${strongTest.id}` : '/dashboard/tests',
+        href: strongTest
+          ? `/dashboard/tests/${strongTest.id}`
+          : "/dashboard/tests",
       };
     }
   }
 
   const scores = attempts
     .map((attempt) => {
-      const test = attempt.test_id ? tests.find((entry) => entry.id === attempt.test_id) : null;
+      const test = attempt.test_id
+        ? tests.find((entry) => entry.id === attempt.test_id)
+        : null;
       return scorePercent(attempt.score, test?.total_marks ?? null);
     })
     .filter((score) => Number.isFinite(score));
 
   const testsAttempted = attempts.length;
-  const averageScore = scores.length > 0
-    ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
-    : 0;
+  const averageScore =
+    scores.length > 0
+      ? Math.round(
+          scores.reduce((sum, score) => sum + score, 0) / scores.length,
+        )
+      : 0;
 
-  const stats: TestSeriesStats | null = testsAttempted > 0
-    ? { testsAttempted, averageScore }
-    : null;
+  const stats: TestSeriesStats | null =
+    testsAttempted > 0 ? { testsAttempted, averageScore } : null;
 
   return {
     readyTests: readyTests.filter((test) => !completedTestIds.has(test.id)),
@@ -359,5 +423,9 @@ export async function fetchTestSeriesOverview(): Promise<TestSeriesOverview> {
 
 export async function fetchTestDetail(testId: string) {
   const overview = await fetchTestSeriesOverview();
-  return overview.readyTests.find((test) => test.id === testId) ?? overview.recentPerformance.find((entry) => entry.id === testId) ?? null;
+  return (
+    overview.readyTests.find((test) => test.id === testId) ??
+    overview.recentPerformance.find((entry) => entry.id === testId) ??
+    null
+  );
 }
